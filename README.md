@@ -2,7 +2,7 @@
 
 Una aplicación móvil desarrollada en **Flutter** que funciona como un WebView optimizado para empaquetar y mostrar un sitio web como una aplicación nativa en Android e iOS.
 <br>
-<img src="phone.png" alt="Pantalla de la app" width="300">
+<img src="phone.png" alt="Pantalla de la app" width="100%">
 ---
 
 ## 🚀 Características
