@@ -1,0 +1,105 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+# -------------------------------------------------------------------------
+# Flutter / Dart
+# -------------------------------------------------------------------------
+# Archivos temporales de Flutter y firmas de compilación
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Si usas web, ignora la carpeta de build local
+# build_web/
+
+# Archivos de caché de Flutter de desarrollo nativo
+ephemeral/
+
+# -------------------------------------------------------------------------
+# Android Específico
+# -------------------------------------------------------------------------
+# Archivos de Gradle y salidas de compilación
+.gradle/
+/android/local.properties
+/android/app/@@@@*
+/android/app/generated_signing_key.pub
+/android/app/google-services.json
+/android/app/key.properties
+*.apk
+*.apks
+*.aab
+
+# -------------------------------------------------------------------------
+# IDEs y Editores de Código
+# -------------------------------------------------------------------------
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+/android/.idea
+/android/*.iml
+
+# Visual Studio Code
+.vscode/
+
+# Editores generales (Mac / Windows)
+.DS_Store
+Thumbs.db
+
+# -------------------------------------------------------------------------
+# Gestión de Paquetes y Entorno (Opcional pero Recomendado)
+# -------------------------------------------------------------------------
+# Archivos de variables de entorno (claves secretas)
+.env
+.env.*
+
+# Logs de errores
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
