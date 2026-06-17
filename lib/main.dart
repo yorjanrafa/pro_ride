@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-
-// 1. NUEVAS IMPORTACIONES
 import 'package:permission_handler/permission_handler.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+
+// 1. NUEVA IMPORTACIÓN PARA ABRIR MAPS
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +47,34 @@ class _WebViewScreenState extends State<WebViewScreen> {
       ..enableZoom(false)
       ..setNavigationDelegate(
         NavigationDelegate(
+          // --- AQUÍ EMPIEZA LA INTERCEPCIÓN DE URLS (SOLUCIÓN GOOGLE MAPS) ---
+          onNavigationRequest: (NavigationRequest request) async {
+            final url = Uri.parse(request.url);
+
+            // Si la URL NO empieza con http o https (ej. intent://, geo:, whatsapp://)
+            if (!request.url.startsWith('http://') &&
+                !request.url.startsWith('https://')) {
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
+              return NavigationDecision
+                  .prevent; // Bloquea que el WebView intente cargarlo
+            }
+
+            // Filtro adicional por si los botones usan links normales de Maps
+            if (request.url.contains('maps.google.com') ||
+                request.url.contains('goo.gl/maps')) {
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
+              return NavigationDecision.prevent;
+            }
+
+            return NavigationDecision
+                .navigate; // Deja pasar la navegación normal web
+          },
+
+          // --- AQUÍ TERMINA LA SOLUCIÓN ---
           onWebResourceError: (error) {
             setState(() => _isOffline = true);
           },
@@ -55,30 +84,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
         ),
       );
 
-    // 2. CONFIGURACIÓN DE PERMISOS GPS PARA ANDROID
-    if (_controller.platform is AndroidWebViewController) {
-      final AndroidWebViewController androidController =
-          _controller.platform as AndroidWebViewController;
-
-      androidController.setGeolocationPermissionsPromptCallbacks(
-        onShowPrompt: (request) async {
-          // Solicitamos permiso a nivel de sistema usando permission_handler
-          var status = await Permission.locationWhenInUse.request();
-          return GeolocationPermissionsResponse(
-            allow: status.isGranted,
-            retain:
-                true, // "retain: true" evita que pregunte cada vez que la página recarga
-          );
-        },
-      );
-    }
-
-    // 3. CARGAMOS LA URL DESPUÉS DE CONFIGURAR TODO
-    _controller.loadRequest(
-      Uri.parse(
-        'https://deliverypro.system.deliverypro.com.ve/workers/login-rider',
-      ),
-    );
+    _setupWebView();
 
     _subscription = Connectivity().onConnectivityChanged.listen((results) {
       if (results.contains(ConnectivityResult.none)) {
@@ -87,6 +93,38 @@ class _WebViewScreenState extends State<WebViewScreen> {
         _retryConnection();
       }
     });
+  }
+
+  Future<void> _setupWebView() async {
+    // 2. CONFIGURACIÓN DE PERMISOS GPS Y COOKIES PARA ANDROID
+    if (_controller.platform is AndroidWebViewController) {
+      final AndroidWebViewController androidController =
+          _controller.platform as AndroidWebViewController;
+
+      // Aceptar cookies de terceros para persistencia de sesión
+      final WebViewCookieManager cookieManager = WebViewCookieManager();
+      if (cookieManager.platform is AndroidWebViewCookieManager) {
+        await (cookieManager.platform as AndroidWebViewCookieManager)
+            .setAcceptThirdPartyCookies(androidController, true);
+      }
+
+      await androidController.setGeolocationPermissionsPromptCallbacks(
+        onShowPrompt: (request) async {
+          var status = await Permission.locationWhenInUse.request();
+          return GeolocationPermissionsResponse(
+            allow: status.isGranted,
+            retain: true,
+          );
+        },
+      );
+    }
+
+    // 3. CARGAMOS LA URL DESPUÉS DE CONFIGURAR TODO
+    await _controller.loadRequest(
+      Uri.parse(
+        'https://deliverypro.system.deliverypro.com.ve/workers/login-rider',
+      ),
+    );
   }
 
   @override
@@ -149,7 +187,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                           ),
                           const SizedBox(height: 20),
                           const Text(
-                            "Tu conexión a internet es mala",
+                            "La conexión a internet es inestable o se ha perdido la conexión. Vuelve a intentarlo.",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 18,
