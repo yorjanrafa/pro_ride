@@ -34,14 +34,33 @@ class WebViewScreen extends StatefulWidget {
   State<WebViewScreen> createState() => _WebViewScreenState();
 }
 
-class _WebViewScreenState extends State<WebViewScreen> {
+class _WebViewScreenState extends State<WebViewScreen> with WidgetsBindingObserver {
   late final WebViewController _controller;
   bool _isOffline = false;
   late StreamSubscription<List<ConnectivityResult>> _subscription;
 
+  static const _channel = MethodChannel('com.example.rider_data_load/cookie_manager');
+
+  Future<void> _flushCookies() async {
+    try {
+      await _channel.invokeMethod('flushCookies');
+      print("Cookies flushed successfully");
+    } on PlatformException catch (e) {
+      print("Failed to flush cookies: ${e.message}");
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _flushCookies();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..enableZoom(false)
@@ -51,7 +70,41 @@ class _WebViewScreenState extends State<WebViewScreen> {
           onNavigationRequest: (NavigationRequest request) async {
             final url = Uri.parse(request.url);
 
-            // Si la URL NO empieza con http o https (ej. intent://, geo:, whatsapp://)
+            // Manejar URLs con esquema de intent nativo de Android (ej. 'intent://maps.google.com/...')
+            if (request.url.startsWith('intent:')) {
+              String webUrl = request.url;
+              final intentIndex = webUrl.indexOf('#Intent;');
+              if (intentIndex != -1) {
+                // Intentar extraer la URL de fallback del navegador si está disponible
+                final fallbackRegex = RegExp(r'S\.browser_fallback_url=([^;]+)');
+                final match = fallbackRegex.firstMatch(webUrl.substring(intentIndex));
+                if (match != null) {
+                  final decodedUrl = Uri.decodeComponent(match.group(1)!);
+                  final fallbackUri = Uri.parse(decodedUrl);
+                  if (await canLaunchUrl(fallbackUri)) {
+                    await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+                    return NavigationDecision.prevent;
+                  }
+                }
+                // Si no hay fallback, recortar los metadatos de Chrome/Android
+                webUrl = webUrl.substring(0, intentIndex);
+              }
+
+              // Reemplazar el esquema "intent" por "https"
+              if (webUrl.startsWith('intent://')) {
+                webUrl = webUrl.replaceFirst('intent://', 'https://');
+              } else {
+                webUrl = webUrl.replaceFirst('intent:', 'https:');
+              }
+
+              final targetUri = Uri.parse(webUrl);
+              if (await canLaunchUrl(targetUri)) {
+                await launchUrl(targetUri, mode: LaunchMode.externalApplication);
+              }
+              return NavigationDecision.prevent;
+            }
+
+            // Si la URL NO empieza con http o https (ej. geo:, whatsapp://, google.navigation:)
             if (!request.url.startsWith('http://') &&
                 !request.url.startsWith('https://')) {
               if (await canLaunchUrl(url)) {
@@ -80,6 +133,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
           },
           onPageFinished: (url) {
             print("Página cargada: $url");
+            _flushCookies();
           },
         ),
       );
@@ -129,6 +183,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _subscription.cancel();
     super.dispose();
   }

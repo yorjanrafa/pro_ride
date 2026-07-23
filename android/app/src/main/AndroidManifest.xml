@@ -16,13 +16,16 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="maps" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="google.navigation" />
+        </intent>
     </queries>
     <application
         android:label="DProRider"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:usesCleartextTraffic="true">
-        >
         <activity
             android:name=".MainActivity"
             android:exported="true"
